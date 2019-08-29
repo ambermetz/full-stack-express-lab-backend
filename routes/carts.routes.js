@@ -1,29 +1,44 @@
 const express = require("express");
 const cartsRoutes = express.Router();
-const cart = require("./cart-items");
+// const cart = require("./cart-items");
+const pool = require("../connection/pg-connection-pool");
 
-cartsRoutes.get("/cart-items", (req, res) => {
-  console.log("get worked");
-  res.send(cart);
-});
+function selectAllItems(req, res) {
+  pool.query("select * from shoppingCart order by id").then(result => {
+    res.send(result.rows);
+  });
+}
+
+cartsRoutes.get("/cart-items", selectAllItems);
 
 cartsRoutes.post("/cart-items", (req, res) => {
-  // adds object to the array of people
-  //   console.log(cart.push(req.body));
-  console.log("post worked");
-  console.log(req.body);
+  pool
+    .query(
+      "insert into shoppingCart (product, price, quantity) values ($1::text, $2::smallint, $3::smallint)",
+      [req.body.product, req.body.price, req.body.quantity] // 2nd param will always be an array
+    )
+    .then(() => {
+      selectAllItems(req, res);
+    });
 });
 
 cartsRoutes.put("/cart-items/:id", (req, res) => {
-  console.log("put worked");
-  console.log(req.params.id);
+  pool
+    .query("update shoppingCart set quantity=$1::int where id=$2::int", [
+      req.body.quantity,
+      req.params.id
+    ])
+    .then(() => {
+      selectAllItems(req, res);
+    });
 });
 
-// :id is a parameter.
-
 cartsRoutes.delete("/cart-items/:id", (req, res) => {
-  console.log("delete worked");
-  console.log(req.params.id);
+  pool
+    .query("delete from shoppingCart where id=$1::int", [req.params.id])
+    .then(() => {
+      selectAllItems(req, res);
+    });
 });
 
 module.exports = cartsRoutes;
